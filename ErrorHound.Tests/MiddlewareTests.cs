@@ -82,6 +82,34 @@ public class MiddlewareTests
     }
 
     [Fact]
+    public async Task Middleware_Catches_ValidationError_MultipleFields()
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+
+        RequestDelegate next = (ctx) =>
+        {
+            var v = new ValidationError();
+            v.AddFieldError("Email", "Email is required");
+            v.AddFieldError("Email", "Email must be valid");
+            v.AddFieldError("Password", "Password is required");
+            throw v;
+        };
+
+        var middleware = CreateMiddleware(next);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        var body = await GetResponseBodyAsync(context);
+
+        Assert.Contains(ErrorCodes.Validation, body);
+        Assert.Contains(ErrorMessages.Validation, body);
+        Assert.Contains("\"Email\":[\"Email is required\",\"Email must be valid\"]", body);
+        Assert.Contains("\"Password\":[\"Password is required\"]", body);
+    }
+
+    [Fact]
     public async Task Middleware_Catches_UnhandledException()
     {
         await TestMiddlewareThrowsAsync(
@@ -110,8 +138,30 @@ public class MiddlewareTests
             "This is a custom message",
             "CUSTOM_CODE",
             () => new NotFoundError("Extra details"),
-            expectedDetails: null,
             options: options
         );
+    }
+
+    [Fact]
+    public async Task Middleware_AllowsSuccessfulRequestWithoutErrors()
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+
+        bool nextCalled = false;
+        RequestDelegate next = (ctx) =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        };
+
+        var middleware = CreateMiddleware(next);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.True(nextCalled);
+        Assert.Equal(200, context.Response.StatusCode);
+        var body = await GetResponseBodyAsync(context);
+        Assert.True(string.IsNullOrEmpty(body));
     }
 }
