@@ -15,21 +15,23 @@ public class MiddlewareTests
         return await reader.ReadToEndAsync();
     }
 
-    private ErrorHoundMiddleware CreateMiddleware(RequestDelegate next)
-        => new ErrorHoundMiddleware(next, null);
+    private ErrorHoundMiddleware CreateMiddleware(RequestDelegate next, ErrorHoundOptions? options = null)
+        => new ErrorHoundMiddleware(next, null, options);
 
     private async Task TestMiddlewareThrowsAsync(
         HttpStatusCode expectedStatus,
         string expectedMessage,
         string expectedCode,
         Func<Exception> createException,
-        string? expectedDetails = null)
+        string? expectedDetails = null,
+        ErrorHoundOptions? options = null)
     {
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 
         RequestDelegate next = (ctx) => throw createException();
-        var middleware = CreateMiddleware(next);
+
+        var middleware = CreateMiddleware(next, options);
 
         await middleware.InvokeAsync(context);
 
@@ -88,5 +90,28 @@ public class MiddlewareTests
             ErrorCodes.InternalServer,
             () => new Exception("Something broke"),
             expectedDetails: "Something broke");
+    }
+
+    [Fact]
+    public async Task Middleware_UsesCustomResponseWrapper()
+    {
+        var options = new ErrorHoundOptions
+        {
+            ResponseWrapper = (ex) => new
+            {
+                customCode = "CUSTOM_CODE",
+                customMessage = "This is a custom message",
+                status = 999
+            }
+        };
+
+        await TestMiddlewareThrowsAsync(
+            HttpStatusCode.InternalServerError,
+            "This is a custom message",
+            "CUSTOM_CODE",
+            () => new NotFoundError("Extra details"),
+            expectedDetails: null,
+            options: options
+        );
     }
 }
