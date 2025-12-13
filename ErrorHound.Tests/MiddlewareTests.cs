@@ -3,6 +3,7 @@ using ErrorHound.BuiltIn;
 using ErrorHound.Core;
 using ErrorHound.Middleware;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ErrorHound.Tests;
 
@@ -15,8 +16,13 @@ public class MiddlewareTests
         return await reader.ReadToEndAsync();
     }
 
-    private ErrorHoundMiddleware CreateMiddleware(RequestDelegate next, ErrorHoundOptions? options = null)
-        => new ErrorHoundMiddleware(next, null, options);
+    private ErrorHoundMiddleware CreateMiddleware(
+        RequestDelegate next,
+        ErrorHoundOptions? options = null)
+    {
+        var logger = NullLogger<ErrorHoundMiddleware>.Instance;
+        return new ErrorHoundMiddleware(next, logger, options);
+    }
 
     private async Task TestMiddlewareThrowsAsync(
         HttpStatusCode expectedStatus,
@@ -29,16 +35,17 @@ public class MiddlewareTests
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 
-        RequestDelegate next = (ctx) => throw createException();
-
+        RequestDelegate next = _ => throw createException();
         var middleware = CreateMiddleware(next, options);
 
         await middleware.InvokeAsync(context);
 
         Assert.Equal((int)expectedStatus, context.Response.StatusCode);
+
         var body = await GetResponseBodyAsync(context);
         Assert.Contains(expectedCode, body);
         Assert.Contains(expectedMessage, body);
+
         if (expectedDetails is not null)
             Assert.Contains(expectedDetails, body);
     }
@@ -58,11 +65,18 @@ public class MiddlewareTests
         ErrorMessages.TooManyRequests)]
     [InlineData(typeof(UnauthorizedError), HttpStatusCode.Unauthorized, ErrorCodes.Unauthorized,
         ErrorMessages.Unauthorized)]
-    public async Task Middleware_Catches_AllBuiltInErrors(Type errorType, HttpStatusCode status, string code,
+    public async Task Middleware_Catches_AllBuiltInErrors(
+        Type errorType,
+        HttpStatusCode status,
+        string code,
         string message)
     {
-        await TestMiddlewareThrowsAsync(status, message, code,
-            () => (Exception)Activator.CreateInstance(errorType, "details")!, "details");
+        await TestMiddlewareThrowsAsync(
+            status,
+            message,
+            code,
+            () => (Exception)Activator.CreateInstance(errorType, "details")!,
+            "details");
     }
 
     [Fact]
@@ -87,7 +101,7 @@ public class MiddlewareTests
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 
-        RequestDelegate next = (ctx) =>
+        RequestDelegate next = _ =>
         {
             var v = new ValidationError();
             v.AddFieldError("Email", "Email is required");
@@ -101,8 +115,8 @@ public class MiddlewareTests
         await middleware.InvokeAsync(context);
 
         Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
-        var body = await GetResponseBodyAsync(context);
 
+        var body = await GetResponseBodyAsync(context);
         Assert.Contains(ErrorCodes.Validation, body);
         Assert.Contains(ErrorMessages.Validation, body);
         Assert.Contains("\"Email\":[\"Email is required\",\"Email must be valid\"]", body);
@@ -125,7 +139,7 @@ public class MiddlewareTests
     {
         var options = new ErrorHoundOptions
         {
-            ResponseWrapper = (ex) => new
+            ResponseWrapper = _ => new
             {
                 customCode = "CUSTOM_CODE",
                 customMessage = "This is a custom message",
@@ -138,8 +152,7 @@ public class MiddlewareTests
             "This is a custom message",
             "CUSTOM_CODE",
             () => new NotFoundError("Extra details"),
-            options: options
-        );
+            options: options);
     }
 
     [Fact]
@@ -149,7 +162,7 @@ public class MiddlewareTests
         context.Response.Body = new MemoryStream();
 
         bool nextCalled = false;
-        RequestDelegate next = (ctx) =>
+        RequestDelegate next = _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
@@ -161,6 +174,7 @@ public class MiddlewareTests
 
         Assert.True(nextCalled);
         Assert.Equal(200, context.Response.StatusCode);
+
         var body = await GetResponseBodyAsync(context);
         Assert.True(string.IsNullOrEmpty(body));
     }
