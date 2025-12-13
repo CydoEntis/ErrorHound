@@ -26,83 +26,47 @@ public class MiddlewareTests
         string? expectedDetails = null)
     {
         var context = new DefaultHttpContext();
-        context.Response.Body = new MemoryStream(); // ensure body is readable
+        context.Response.Body = new MemoryStream();
 
         RequestDelegate next = (ctx) => throw createException();
-
         var middleware = CreateMiddleware(next);
 
         await middleware.InvokeAsync(context);
 
         Assert.Equal((int)expectedStatus, context.Response.StatusCode);
-
         var body = await GetResponseBodyAsync(context);
-
         Assert.Contains(expectedCode, body);
         Assert.Contains(expectedMessage, body);
-
         if (expectedDetails is not null)
             Assert.Contains(expectedDetails, body);
     }
 
-    [Fact]
-    public async Task Middleware_Catches_BadRequestError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.BadRequest, ErrorMessages.BadRequest, ErrorCodes.BadRequest,
-            () => new BadRequestError());
-
-    [Fact]
-    public async Task Middleware_Catches_ConflictError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.Conflict, ErrorMessages.Conflict, ErrorCodes.Conflict,
-            () => new ConflictError());
-
-    [Fact]
-    public async Task Middleware_Catches_DatabaseError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.InternalServerError, ErrorMessages.Database,
-            ErrorCodes.Database,
-            () => new DatabaseError());
-
-    [Fact]
-    public async Task Middleware_Catches_ForbiddenError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.Forbidden, ErrorMessages.Forbidden, ErrorCodes.Forbidden,
-            () => new ForbiddenError());
-
-    [Fact]
-    public async Task Middleware_Catches_InternalServerError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.InternalServerError, ErrorMessages.InternalServer,
-            ErrorCodes.InternalServer,
-            () => new InternalServerError("Something went wrong"), expectedDetails: "Something went wrong");
-
-    [Fact]
-    public async Task Middleware_Catches_NotFoundError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.NotFound, ErrorMessages.NotFound, ErrorCodes.NotFound,
-            () => new NotFoundError());
-
-    [Fact]
-    public async Task Middleware_Catches_ServiceUnavailableError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.ServiceUnavailable, ErrorMessages.ServiceUnavailable,
-            ErrorCodes.ServiceUnavailable,
-            () => new ServiceUnavailableError());
-
-    [Fact]
-    public async Task Middleware_Catches_TimeoutError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.GatewayTimeout, ErrorMessages.Timeout, ErrorCodes.Timeout,
-            () => new TimeoutError());
-
-    [Fact]
-    public async Task Middleware_Catches_TooManyRequestsError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.TooManyRequests, ErrorMessages.TooManyRequests,
-            ErrorCodes.TooManyRequests,
-            () => new TooManyRequestsError());
-
-    [Fact]
-    public async Task Middleware_Catches_UnauthorizedError()
-        => await TestMiddlewareThrowsAsync(HttpStatusCode.Unauthorized, ErrorMessages.Unauthorized,
-            ErrorCodes.Unauthorized,
-            () => new UnauthorizedError());
+    [Theory]
+    [InlineData(typeof(BadRequestError), HttpStatusCode.BadRequest, ErrorCodes.BadRequest, ErrorMessages.BadRequest)]
+    [InlineData(typeof(ConflictError), HttpStatusCode.Conflict, ErrorCodes.Conflict, ErrorMessages.Conflict)]
+    [InlineData(typeof(DatabaseError), HttpStatusCode.InternalServerError, ErrorCodes.Database, ErrorMessages.Database)]
+    [InlineData(typeof(ForbiddenError), HttpStatusCode.Forbidden, ErrorCodes.Forbidden, ErrorMessages.Forbidden)]
+    [InlineData(typeof(InternalServerError), HttpStatusCode.InternalServerError, ErrorCodes.InternalServer,
+        ErrorMessages.InternalServer)]
+    [InlineData(typeof(NotFoundError), HttpStatusCode.NotFound, ErrorCodes.NotFound, ErrorMessages.NotFound)]
+    [InlineData(typeof(ServiceUnavailableError), HttpStatusCode.ServiceUnavailable, ErrorCodes.ServiceUnavailable,
+        ErrorMessages.ServiceUnavailable)]
+    [InlineData(typeof(TimeoutError), HttpStatusCode.GatewayTimeout, ErrorCodes.Timeout, ErrorMessages.Timeout)]
+    [InlineData(typeof(TooManyRequestsError), HttpStatusCode.TooManyRequests, ErrorCodes.TooManyRequests,
+        ErrorMessages.TooManyRequests)]
+    [InlineData(typeof(UnauthorizedError), HttpStatusCode.Unauthorized, ErrorCodes.Unauthorized,
+        ErrorMessages.Unauthorized)]
+    public async Task Middleware_Catches_AllBuiltInErrors(Type errorType, HttpStatusCode status, string code,
+        string message)
+    {
+        await TestMiddlewareThrowsAsync(status, message, code,
+            () => (Exception)Activator.CreateInstance(errorType, "details")!, "details");
+    }
 
     [Fact]
     public async Task Middleware_Catches_ValidationError()
-        => await TestMiddlewareThrowsAsync(
+    {
+        await TestMiddlewareThrowsAsync(
             HttpStatusCode.BadRequest,
             ErrorMessages.Validation,
             ErrorCodes.Validation,
@@ -113,4 +77,16 @@ public class MiddlewareTests
                 return v;
             },
             expectedDetails: "\"Email\":[\"Email is required\"]");
+    }
+
+    [Fact]
+    public async Task Middleware_Catches_UnhandledException()
+    {
+        await TestMiddlewareThrowsAsync(
+            HttpStatusCode.InternalServerError,
+            ErrorMessages.InternalServer,
+            ErrorCodes.InternalServer,
+            () => new Exception("Something broke"),
+            expectedDetails: "Something broke");
+    }
 }
