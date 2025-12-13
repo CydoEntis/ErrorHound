@@ -20,9 +20,7 @@
 
     <ItemGroup>
         <Folder Include="Abstractions\"/>
-        <Folder Include="BuiltIn\"/>
         <Folder Include="Helpers\" />
-        <Folder Include="Core\"/>
         <Folder Include="Middleware\"/>
     </ItemGroup>
 
