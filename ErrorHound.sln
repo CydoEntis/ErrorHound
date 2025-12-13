@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorHound", "ErrorHound\ErrorHound.csproj", "{7D7B444A-5F92-450C-9351-EDC58E1EDA1B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorHound.TestApi", "ErrorHound.TestApi\ErrorHound.TestApi.csproj", "{9C077018-A0B3-4451-81B8-002336A2F707}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{7D7B444A-5F92-450C-9351-EDC58E1EDA1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D7B444A-5F92-450C-9351-EDC58E1EDA1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D7B444A-5F92-450C-9351-EDC58E1EDA1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C077018-A0B3-4451-81B8-002336A2F707}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C077018-A0B3-4451-81B8-002336A2F707}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C077018-A0B3-4451-81B8-002336A2F707}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C077018-A0B3-4451-81B8-002336A2F707}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
