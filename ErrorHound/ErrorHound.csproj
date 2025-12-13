@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <PackageId>ErrorHound</PackageId>
+        <Version>0.1.0</Version>
+        <Authors>Cody Stine</Authors>
+        <Company>ErrorHound</Company>
+        <Description>Consistent error handling for ASP.NET Minimal APIs</Description>
+        <PackageTags>errors;aspnet;minimal-api;middleware</PackageTags>
+        <RepositoryUrl>https://github.com/yourname/ErrorHound</RepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Abstractions\"/>
+        <Folder Include="BuiltIn\"/>
+        <Folder Include="Helpers\" />
+        <Folder Include="Core\"/>
+        <Folder Include="Middleware\"/>
+    </ItemGroup>
+
+</Project>
