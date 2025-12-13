@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using ErrorHound.Core;
 
+namespace ErrorHound.BuiltIn;
+
 /// <summary>
 /// Represents a validation error that can contain multiple errors per field.
 /// Intended to be serialized into a consistent API response by ErrorHound middleware.
