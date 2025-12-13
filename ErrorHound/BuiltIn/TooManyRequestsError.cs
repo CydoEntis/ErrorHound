@@ -9,12 +9,5 @@ using ErrorHound.Core;
 public sealed class TooManyRequestsError : ApiError
 {
     public TooManyRequestsError(string? details = null)
-        : base(
-            code: ErrorCodes.TooManyRequests,
-            message: "Too many requests have been made. Please try again later.",
-            status: (int)HttpStatusCode.TooManyRequests,
-            details: details
-        )
-    {
-    }
+        : base(ErrorCodes.TooManyRequests, ErrorMessages.TooManyRequests, (int)HttpStatusCode.TooManyRequests, details) { }
 }

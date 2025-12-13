@@ -1,7 +1,7 @@
-﻿namespace ErrorHound.BuiltIn;
+﻿using System.Net;
+using ErrorHound.Core;
 
-using System.Net;
-using Core;
+namespace ErrorHound.BuiltIn;
 
 /// <summary>
 /// Represents a malformed or invalid client request.
@@ -9,12 +9,7 @@ using Core;
 public sealed class BadRequestError : ApiError
 {
     public BadRequestError(string? details = null)
-        : base(
-            code: ErrorCodes.BadRequest,
-            message: "The request was invalid or malformed.",
-            status: (int)HttpStatusCode.BadRequest,
-            details: details
-        )
+        : base(ErrorCodes.BadRequest, ErrorMessages.BadRequest, (int)HttpStatusCode.BadRequest, details)
     {
     }
 }

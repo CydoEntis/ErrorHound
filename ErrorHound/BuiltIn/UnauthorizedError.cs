@@ -9,12 +9,5 @@ using Core;
 public sealed class UnauthorizedError : ApiError
 {
     public UnauthorizedError(string? details = null)
-        : base(
-            code: ErrorCodes.Unauthorized,
-            message: "Authentication is required to access this resource.",
-            status: (int)HttpStatusCode.Unauthorized,
-            details: details
-        )
-    {
-    }
+        : base(ErrorCodes.Unauthorized, ErrorMessages.Unauthorized, (int)HttpStatusCode.Unauthorized, details) { }
 }

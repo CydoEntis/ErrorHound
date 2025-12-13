@@ -9,12 +9,5 @@ using ErrorHound.Core;
 public sealed class ServiceUnavailableError : ApiError
 {
     public ServiceUnavailableError(string? details = null)
-        : base(
-            code: ErrorCodes.ServiceUnavailable,
-            message: "The service is unavailable.",
-            status: (int)HttpStatusCode.ServiceUnavailable,
-            details: details
-        )
-    {
-    }
+        : base(ErrorCodes.ServiceUnavailable, ErrorMessages.ServiceUnavailable, (int)HttpStatusCode.ServiceUnavailable, details) { }
 }

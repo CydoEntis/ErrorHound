@@ -9,12 +9,5 @@ using ErrorHound.Core;
 public sealed class TimeoutError : ApiError
 {
     public TimeoutError(string? details = null)
-        : base(
-            code: ErrorCodes.Timeout,
-            message: "The request timed out while processing.",
-            status: (int)HttpStatusCode.GatewayTimeout,
-            details: details
-        )
-    {
-    }
+        : base(ErrorCodes.Timeout, ErrorMessages.Timeout, (int)HttpStatusCode.GatewayTimeout, details) { }
 }

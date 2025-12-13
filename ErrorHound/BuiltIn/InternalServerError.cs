@@ -9,12 +9,5 @@ using ErrorHound.Core;
 public sealed class InternalServerError : ApiError
 {
     public InternalServerError(string? details = null)
-        : base(
-            code: ErrorCodes.InternalServer,
-            message: "An unexpected internal server error occurred.",
-            status: (int)HttpStatusCode.InternalServerError,
-            details: details
-        )
-    {
-    }
+        : base(ErrorCodes.InternalServer, ErrorMessages.InternalServer, (int)HttpStatusCode.InternalServerError, details) { }
 }

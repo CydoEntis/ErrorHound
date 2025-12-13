@@ -9,12 +9,5 @@ using ErrorHound.Core;
 public sealed class NotFoundError : ApiError
 {
     public NotFoundError(string? details = null)
-        : base(
-            code: ErrorCodes.NotFound,
-            message: "The data could not be found.",
-            status: (int)HttpStatusCode.NotFound,
-            details: details
-        )
-    {
-    }
+        : base(ErrorCodes.NotFound, ErrorMessages.NotFound, (int)HttpStatusCode.NotFound, details) { }
 }

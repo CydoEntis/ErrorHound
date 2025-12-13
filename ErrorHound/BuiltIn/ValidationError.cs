@@ -24,10 +24,8 @@ public sealed class ValidationError : ApiError
     /// <param name="fieldErrors">
     /// Optional pre-populated collection of field-level validation errors.
     /// </param>
-    public ValidationError(
-        string message = "Validation failed",
-        IDictionary<string, List<string>>? fieldErrors = null
-    )
+    public ValidationError(string message = ErrorMessages.Validation,
+        IDictionary<string, List<string>>? fieldErrors = null)
         : base(ErrorCodes.Validation, message, (int)HttpStatusCode.BadRequest)
     {
         FieldErrors = fieldErrors ?? new Dictionary<string, List<string>>();

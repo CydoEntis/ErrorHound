@@ -9,12 +9,7 @@ using ErrorHound.Core;
 public sealed class DatabaseError : ApiError
 {
     public DatabaseError(string? details = null)
-        : base(
-            code: ErrorCodes.Database,
-            message: "A server error occurred while accessing the database.",
-            status: (int)HttpStatusCode.InternalServerError,
-            details: details
-        )
+        : base(ErrorCodes.Database, ErrorMessages.Database, (int)HttpStatusCode.InternalServerError, details)
     {
     }
 }

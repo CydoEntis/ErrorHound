@@ -9,12 +9,7 @@ using ErrorHound.Core;
 public sealed class ConflictError : ApiError
 {
     public ConflictError(string? details = null)
-        : base(
-            code: ErrorCodes.Conflict,
-            message: "The request could not be completed due to a conflict.",
-            status: (int)HttpStatusCode.Conflict,
-            details: details
-        )
+        : base(ErrorCodes.Conflict, ErrorMessages.Conflict, (int)HttpStatusCode.Conflict, details)
     {
     }
 }
