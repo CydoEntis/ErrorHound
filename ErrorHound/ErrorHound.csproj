@@ -7,19 +7,21 @@
 
         <PackageId>ErrorHound</PackageId>
         <Version>0.1.0</Version>
-        <Authors>Cody Stine</Authors>
+        <Authors>Cydo</Authors>
         <Company>ErrorHound</Company>
-        <Description>Consistent error handling for ASP.NET Minimal APIs</Description>
+        <Description>Consistent error handling middleware for ASP.NET Minimal APIs</Description>
         <PackageTags>errors;aspnet;minimal-api;middleware</PackageTags>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <RepositoryUrl>https://github.com/yourname/ErrorHound</RepositoryUrl>
+        <RepositoryUrl>https://github.com/CydoEntis/ErrorHound</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <PackageReleaseNotes>Initial release of ErrorHound</PackageReleaseNotes>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>
