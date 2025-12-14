@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./.github/assets/logo.png" alt="ErrorHound Logo" width="200"/>
+  <img src="./.github/assets/logo.png" alt="ErrorHound Logo" width="200" style="border-radius: 20px;"/>
 
   # ErrorHound
 
@@ -19,11 +19,12 @@
   - [Minimal APIs](#minimal-apis-webapplication)
   - [Classic ASP.NET Core](#classic-aspnet-core-iapplicationbuilder)
 - [Built-in Errors](#built-in-errors)
-- [Usage Examples](#usage-examples)
-  - [Basic Error Handling](#basic-error-handling)
-  - [Validation Errors](#validation-errors)
-  - [Adding Details to Errors](#adding-details-to-errors)
-  - [Custom Response Wrapper](#custom-response-wrapper)
+- [Using All Error Types](#using-all-error-types)
+- [Response Formats](#response-formats)
+  - [Default Response Format](#default-response-format)
+  - [Custom Response Wrapper](#custom-response-wrapper-1)
+- [Validation Errors](#validation-errors-1)
+- [Creating Custom Errors](#creating-custom-errors)
 - [Real-World Scenarios](#real-world-scenarios)
 - [API Reference](#api-reference)
 - [Testing](#testing)
@@ -198,6 +199,828 @@ ErrorHound provides 11 ready-to-use error types:
 | `ServiceUnavailableError` | 503         | `SERVICE_UNAVAILABLE` | "The service is unavailable."                               |
 | `TimeoutError`            | 504         | `TIMEOUT`             | "The request timed out while processing."                   |
 | `ValidationError`         | 400         | `VALIDATION`          | "Validation failed"                                         |
+
+---
+
+## Using All Error Types
+
+Here's how to use each built-in error type with practical examples:
+
+### BadRequestError (400)
+
+Use when the client sends invalid or malformed data:
+
+```csharp
+app.MapPost("/products", (CreateProductRequest request) =>
+{
+    if (request.Price < 0)
+        throw new BadRequestError("Price cannot be negative");
+
+    if (string.IsNullOrWhiteSpace(request.Name))
+        throw new BadRequestError("Product name is required");
+
+    // Create product...
+});
+```
+
+**Response:**
+```json
+{
+  "code": "BAD_REQUEST",
+  "message": "The request was invalid or malformed.",
+  "status": 400,
+  "details": "Price cannot be negative"
+}
+```
+
+### UnauthorizedError (401)
+
+Use when authentication is required or has failed:
+
+```csharp
+app.MapGet("/admin/dashboard", (HttpContext context) =>
+{
+    var token = context.Request.Headers["Authorization"].FirstOrDefault();
+
+    if (string.IsNullOrEmpty(token))
+        throw new UnauthorizedError("Authentication token is required");
+
+    if (!IsValidToken(token))
+        throw new UnauthorizedError("Invalid or expired token");
+
+    // Return dashboard data...
+});
+```
+
+**Response:**
+```json
+{
+  "code": "UNAUTHORIZED",
+  "message": "Authentication is required to access this resource.",
+  "status": 401,
+  "details": "Invalid or expired token"
+}
+```
+
+### ForbiddenError (403)
+
+Use when a user is authenticated but lacks permission:
+
+```csharp
+app.MapDelete("/users/{id}", (int id, HttpContext context) =>
+{
+    var currentUserId = GetCurrentUserId(context);
+    var currentUserRole = GetUserRole(context);
+
+    if (currentUserRole != "Admin" && currentUserId != id)
+        throw new ForbiddenError("You can only delete your own account");
+
+    // Delete user...
+});
+```
+
+**Response:**
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "You do not have permission to access this resource.",
+  "status": 403,
+  "details": "You can only delete your own account"
+}
+```
+
+### NotFoundError (404)
+
+Use when a requested resource doesn't exist:
+
+```csharp
+app.MapGet("/orders/{id}", async (int id, IOrderRepository repo) =>
+{
+    var order = await repo.GetByIdAsync(id);
+
+    if (order == null)
+        throw new NotFoundError($"Order with ID {id} not found");
+
+    return order;
+});
+```
+
+**Response:**
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "The requested resource could not be found.",
+  "status": 404,
+  "details": "Order with ID 123 not found"
+}
+```
+
+### ConflictError (409)
+
+Use when a request conflicts with current state:
+
+```csharp
+app.MapPost("/users/register", async (RegisterRequest request, IUserRepository repo) =>
+{
+    var existingUser = await repo.FindByEmailAsync(request.Email);
+
+    if (existingUser != null)
+        throw new ConflictError($"User with email {request.Email} already exists");
+
+    // Create user...
+});
+```
+
+**Response:**
+```json
+{
+  "code": "CONFLICT",
+  "message": "The request could not be completed due to a conflict.",
+  "status": 409,
+  "details": "User with email john@example.com already exists"
+}
+```
+
+### TooManyRequestsError (429)
+
+Use for rate limiting:
+
+```csharp
+app.MapPost("/api/send-email", async (EmailRequest request, IRateLimiter limiter) =>
+{
+    var allowed = await limiter.CheckRateLimitAsync(request.UserId, "email", max: 10, window: TimeSpan.FromHours(1));
+
+    if (!allowed)
+        throw new TooManyRequestsError("Email rate limit exceeded. Maximum 10 emails per hour.");
+
+    // Send email...
+});
+```
+
+**Response:**
+```json
+{
+  "code": "TOO_MANY_REQUESTS",
+  "message": "Too many requests have been made. Please try again later.",
+  "status": 429,
+  "details": "Email rate limit exceeded. Maximum 10 emails per hour."
+}
+```
+
+### InternalServerError (500)
+
+Use for unexpected server errors:
+
+```csharp
+app.MapGet("/reports/generate", () =>
+{
+    try
+    {
+        // Complex report generation...
+        return GenerateReport();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Report generation failed");
+        throw new InternalServerError("Failed to generate report. Please try again later.");
+    }
+});
+```
+
+**Response:**
+```json
+{
+  "code": "INTERNAL_SERVER",
+  "message": "An unexpected internal server error occurred.",
+  "status": 500,
+  "details": "Failed to generate report. Please try again later."
+}
+```
+
+### DatabaseError (500)
+
+Use for database-specific errors:
+
+```csharp
+app.MapPost("/orders", async (CreateOrderRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var order = new Order { /* ... */ };
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();
+        return order;
+    }
+    catch (DbUpdateException ex)
+    {
+        _logger.LogError(ex, "Database error creating order");
+        throw new DatabaseError("Failed to create order due to a database error");
+    }
+});
+```
+
+**Response:**
+```json
+{
+  "code": "DATABASE",
+  "message": "A server error occurred while accessing the database.",
+  "status": 500,
+  "details": "Failed to create order due to a database error"
+}
+```
+
+### ServiceUnavailableError (503)
+
+Use when an external service is unavailable:
+
+```csharp
+app.MapGet("/payment/status/{id}", async (string id, IPaymentGateway gateway) =>
+{
+    try
+    {
+        return await gateway.GetPaymentStatusAsync(id);
+    }
+    catch (HttpRequestException)
+    {
+        throw new ServiceUnavailableError("Payment gateway is temporarily unavailable. Please try again later.");
+    }
+});
+```
+
+**Response:**
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "message": "The service is unavailable.",
+  "status": 503,
+  "details": "Payment gateway is temporarily unavailable. Please try again later."
+}
+```
+
+### TimeoutError (504)
+
+Use when operations exceed time limits:
+
+```csharp
+app.MapGet("/analytics/report", async (IAnalyticsService analytics) =>
+{
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+    try
+    {
+        return await analytics.GenerateReportAsync(cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        throw new TimeoutError("Report generation timed out. Please try with a smaller date range.");
+    }
+});
+```
+
+**Response:**
+```json
+{
+  "code": "TIMEOUT",
+  "message": "The request timed out while processing.",
+  "status": 504,
+  "details": "Report generation timed out. Please try with a smaller date range."
+}
+```
+
+---
+
+## Response Formats
+
+### Default Response Format
+
+When you use ErrorHound **without** a custom response wrapper, all errors return in this standardized format:
+
+```json
+{
+  "code": "ERROR_CODE",
+  "message": "Human-readable error message",
+  "status": 400,
+  "details": "Optional additional details or null"
+}
+```
+
+**Example with NotFoundError:**
+
+```csharp
+throw new NotFoundError("User with ID 123 not found");
+```
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "The requested resource could not be found.",
+  "status": 404,
+  "details": "User with ID 123 not found"
+}
+```
+
+**Example with ValidationError:**
+
+```csharp
+var validation = new ValidationError();
+validation.AddFieldError("Email", "Email is required");
+validation.AddFieldError("Password", "Password must be at least 8 characters");
+throw validation;
+```
+
+```json
+{
+  "code": "VALIDATION",
+  "message": "Validation failed",
+  "status": 400,
+  "details": {
+    "Email": ["Email is required"],
+    "Password": ["Password must be at least 8 characters"]
+  }
+}
+```
+
+**Example without details:**
+
+```csharp
+throw new UnauthorizedError();
+```
+
+```json
+{
+  "code": "UNAUTHORIZED",
+  "message": "Authentication is required to access this resource.",
+  "status": 401,
+  "details": null
+}
+```
+
+### Custom Response Wrapper
+
+You can completely customize the response structure using the `ResponseWrapper` option. This is useful for:
+- Matching existing API response formats
+- Adding additional metadata (timestamps, request IDs, etc.)
+- Wrapping errors in a consistent envelope
+
+#### Example 1: Simple Custom Format
+
+```csharp
+app.UseErrorHound(options =>
+{
+    options.ResponseWrapper = (error) => new
+    {
+        success = false,
+        errorCode = error.Code,
+        errorMessage = error.Message,
+        timestamp = DateTime.UtcNow
+    };
+});
+```
+
+**When you throw:**
+```csharp
+throw new NotFoundError("User not found");
+```
+
+**Response becomes:**
+```json
+{
+  "success": false,
+  "errorCode": "NOT_FOUND",
+  "errorMessage": "The requested resource could not be found.",
+  "timestamp": "2025-12-13T15:30:00Z"
+}
+```
+
+#### Example 2: Envelope Pattern with Metadata
+
+```csharp
+app.UseErrorHound(options =>
+{
+    options.ResponseWrapper = (error) => new
+    {
+        success = false,
+        error = new
+        {
+            code = error.Code,
+            message = error.Message,
+            details = error.Details
+        },
+        meta = new
+        {
+            timestamp = DateTime.UtcNow,
+            requestId = Guid.NewGuid().ToString(),
+            version = "v1"
+        }
+    };
+});
+```
+
+**Response:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "The request was invalid or malformed.",
+    "details": "Invalid product ID"
+  },
+  "meta": {
+    "timestamp": "2025-12-13T15:30:00Z",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
+    "version": "v1"
+  }
+}
+```
+
+#### Example 3: JSend-Style Responses
+
+```csharp
+app.UseErrorHound(options =>
+{
+    options.ResponseWrapper = (error) => new
+    {
+        status = "error",
+        message = error.Message,
+        code = error.Code,
+        data = error.Details
+    };
+});
+```
+
+**Response:**
+```json
+{
+  "status": "error",
+  "message": "The requested resource could not be found.",
+  "code": "NOT_FOUND",
+  "data": "Product with ID 456 not found"
+}
+```
+
+#### Example 4: Including HTTP Status in Body
+
+```csharp
+app.UseErrorHound(options =>
+{
+    options.ResponseWrapper = (error) => new
+    {
+        httpStatus = error.Status,
+        errorCode = error.Code,
+        errorMessage = error.Message,
+        errorDetails = error.Details,
+        timestamp = DateTime.UtcNow.ToString("o")
+    };
+});
+```
+
+**Response:**
+```json
+{
+  "httpStatus": 409,
+  "errorCode": "CONFLICT",
+  "errorMessage": "The request could not be completed due to a conflict.",
+  "errorDetails": "Email already exists",
+  "timestamp": "2025-12-13T15:30:00.0000000Z"
+}
+```
+
+**Important Note:** When using a custom `ResponseWrapper`, ErrorHound sets the HTTP status code to **500** (Internal Server Error) to prevent information leakage. If you need the original status codes, you can access `error.Status` and set it manually in your wrapper logic.
+
+---
+
+## Validation Errors
+
+`ValidationError` is a special error type for handling form validation with support for multiple errors per field.
+
+### Basic Usage
+
+```csharp
+app.MapPost("/users", (CreateUserRequest request) =>
+{
+    var validation = new ValidationError();
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+        validation.AddFieldError("Email", "Email is required");
+
+    if (string.IsNullOrWhiteSpace(request.Password))
+        validation.AddFieldError("Password", "Password is required");
+
+    if (validation.FieldErrors.Any())
+        throw validation;
+
+    // Create user...
+});
+```
+
+**Default Response:**
+```json
+{
+  "code": "VALIDATION",
+  "message": "Validation failed",
+  "status": 400,
+  "details": {
+    "Email": ["Email is required"],
+    "Password": ["Password is required"]
+  }
+}
+```
+
+### Multiple Errors Per Field
+
+You can add multiple validation errors to the same field:
+
+```csharp
+var validation = new ValidationError();
+
+validation.AddFieldError("Email", "Email is required");
+validation.AddFieldError("Email", "Email must be a valid email address");
+validation.AddFieldError("Email", "Email domain is not allowed");
+
+validation.AddFieldError("Password", "Password is required");
+validation.AddFieldError("Password", "Password must be at least 8 characters");
+validation.AddFieldError("Password", "Password must contain a number");
+
+throw validation;
+```
+
+**Response:**
+```json
+{
+  "code": "VALIDATION",
+  "message": "Validation failed",
+  "status": 400,
+  "details": {
+    "Email": [
+      "Email is required",
+      "Email must be a valid email address",
+      "Email domain is not allowed"
+    ],
+    "Password": [
+      "Password is required",
+      "Password must be at least 8 characters",
+      "Password must contain a number"
+    ]
+  }
+}
+```
+
+### Custom Validation Message
+
+You can override the default "Validation failed" message:
+
+```csharp
+var validation = new ValidationError("Registration validation failed");
+validation.AddFieldError("Username", "Username is already taken");
+throw validation;
+```
+
+**Response:**
+```json
+{
+  "code": "VALIDATION",
+  "message": "Registration validation failed",
+  "status": 400,
+  "details": {
+    "Username": ["Username is already taken"]
+  }
+}
+```
+
+### Pre-populated Field Errors
+
+You can create a `ValidationError` with pre-populated errors:
+
+```csharp
+var fieldErrors = new Dictionary<string, List<string>>
+{
+    ["Email"] = new List<string> { "Email is required" },
+    ["Password"] = new List<string> { "Password is required", "Password is too short" }
+};
+
+throw new ValidationError("Form validation failed", fieldErrors);
+```
+
+---
+
+## Creating Custom Errors
+
+You can create your own error types by extending the `ApiError` base class. This is useful for domain-specific errors.
+
+### Basic Custom Error
+
+```csharp
+using System.Net;
+using ErrorHound.Core;
+
+namespace MyApp.Errors;
+
+public sealed class PaymentFailedError : ApiError
+{
+    public PaymentFailedError(string? details = null)
+        : base("PAYMENT_FAILED",
+               "Payment processing failed",
+               (int)HttpStatusCode.PaymentRequired,
+               details)
+    {
+    }
+}
+```
+
+**Usage:**
+```csharp
+app.MapPost("/checkout", async (CheckoutRequest request, IPaymentService payment) =>
+{
+    var result = await payment.ProcessPaymentAsync(request);
+
+    if (!result.Success)
+        throw new PaymentFailedError(result.ErrorMessage);
+
+    return Results.Ok(result);
+});
+```
+
+**Response:**
+```json
+{
+  "code": "PAYMENT_FAILED",
+  "message": "Payment processing failed",
+  "status": 402,
+  "details": "Insufficient funds"
+}
+```
+
+### Custom Error with Constants
+
+For better organization, define error codes and messages as constants:
+
+```csharp
+using System.Net;
+using ErrorHound.Core;
+
+namespace MyApp.Errors;
+
+public static class CustomErrorCodes
+{
+    public const string SubscriptionExpired = "SUBSCRIPTION_EXPIRED";
+    public const string QuotaExceeded = "QUOTA_EXCEEDED";
+}
+
+public static class CustomErrorMessages
+{
+    public const string SubscriptionExpired = "Your subscription has expired";
+    public const string QuotaExceeded = "You have exceeded your usage quota";
+}
+
+public sealed class SubscriptionExpiredError : ApiError
+{
+    public SubscriptionExpiredError(string? details = null)
+        : base(CustomErrorCodes.SubscriptionExpired,
+               CustomErrorMessages.SubscriptionExpired,
+               (int)HttpStatusCode.PaymentRequired,
+               details)
+    {
+    }
+}
+
+public sealed class QuotaExceededError : ApiError
+{
+    public QuotaExceededError(string? details = null)
+        : base(CustomErrorCodes.QuotaExceeded,
+               CustomErrorMessages.QuotaExceeded,
+               (int)HttpStatusCode.TooManyRequests,
+               details)
+    {
+    }
+}
+```
+
+**Usage:**
+```csharp
+app.MapPost("/api/process", async (ProcessRequest request, ISubscriptionService subs) =>
+{
+    var subscription = await subs.GetSubscriptionAsync(request.UserId);
+
+    if (subscription.IsExpired)
+        throw new SubscriptionExpiredError($"Expired on {subscription.ExpiryDate:yyyy-MM-dd}");
+
+    if (subscription.UsageCount >= subscription.Quota)
+        throw new QuotaExceededError($"Limit: {subscription.Quota} requests per month");
+
+    // Process request...
+});
+```
+
+### Custom Error with Rich Details
+
+```csharp
+using System.Net;
+using ErrorHound.Core;
+
+namespace MyApp.Errors;
+
+public sealed class BusinessRuleViolationError : ApiError
+{
+    public BusinessRuleViolationError(string rule, string reason, object? additionalData = null)
+        : base("BUSINESS_RULE_VIOLATION",
+               $"Business rule '{rule}' was violated",
+               (int)HttpStatusCode.UnprocessableEntity,
+               new
+               {
+                   rule,
+                   reason,
+                   additionalData
+               })
+    {
+    }
+}
+```
+
+**Usage:**
+```csharp
+app.MapPost("/orders", (CreateOrderRequest request) =>
+{
+    if (request.Items.Count > 100)
+        throw new BusinessRuleViolationError(
+            rule: "MaxOrderItems",
+            reason: "Orders cannot contain more than 100 items",
+            additionalData: new { maxItems = 100, requestedItems = request.Items.Count }
+        );
+
+    // Create order...
+});
+```
+
+**Response:**
+```json
+{
+  "code": "BUSINESS_RULE_VIOLATION",
+  "message": "Business rule 'MaxOrderItems' was violated",
+  "status": 422,
+  "details": {
+    "rule": "MaxOrderItems",
+    "reason": "Orders cannot contain more than 100 items",
+    "additionalData": {
+      "maxItems": 100,
+      "requestedItems": 150
+    }
+  }
+}
+```
+
+### Custom Error with Parameterized Message
+
+```csharp
+using System.Net;
+using ErrorHound.Core;
+
+namespace MyApp.Errors;
+
+public sealed class ResourceLockedError : ApiError
+{
+    public ResourceLockedError(string resourceType, string resourceId, string lockedBy)
+        : base("RESOURCE_LOCKED",
+               $"{resourceType} is currently locked by another user",
+               (int)HttpStatusCode.Locked,
+               new
+               {
+                   resourceType,
+                   resourceId,
+                   lockedBy,
+                   lockedAt = DateTime.UtcNow
+               })
+    {
+    }
+}
+```
+
+**Usage:**
+```csharp
+app.MapPut("/documents/{id}", async (int id, UpdateDocumentRequest request, IDocumentService docs) =>
+{
+    var doc = await docs.GetAsync(id);
+
+    if (doc.IsLocked && doc.LockedBy != request.UserId)
+        throw new ResourceLockedError("Document", id.ToString(), doc.LockedBy);
+
+    // Update document...
+});
+```
+
+**Response:**
+```json
+{
+  "code": "RESOURCE_LOCKED",
+  "message": "Document is currently locked by another user",
+  "status": 423,
+  "details": {
+    "resourceType": "Document",
+    "resourceId": "42",
+    "lockedBy": "user@example.com",
+    "lockedAt": "2025-12-13T15:30:00Z"
+  }
+}
+```
 
 ---
 
