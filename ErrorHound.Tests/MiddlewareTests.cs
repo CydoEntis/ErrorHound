@@ -148,7 +148,7 @@ public class MiddlewareTests
         };
 
         await TestMiddlewareThrowsAsync(
-            HttpStatusCode.InternalServerError,
+            HttpStatusCode.NotFound,
             "This is a custom message",
             "CUSTOM_CODE",
             () => new NotFoundError("Extra details"),

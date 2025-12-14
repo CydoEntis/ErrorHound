@@ -32,9 +32,7 @@ public class ErrorHoundMiddleware
         {
             _logger.LogWarning("Validation error: {Code} - {Message}", ex.Code, ex.Message);
 
-            context.Response.StatusCode = _options.ResponseWrapper != null
-                ? (int)HttpStatusCode.InternalServerError
-                : ex.Status;
+            context.Response.StatusCode = ex.Status;
             context.Response.ContentType = "application/json";
 
             var response = _options.ResponseWrapper?.Invoke(ex) ?? new
@@ -51,9 +49,7 @@ public class ErrorHoundMiddleware
         {
             _logger.LogError("ApiError: {Code} - {Message}", ex.Code, ex.Message);
 
-            context.Response.StatusCode = _options.ResponseWrapper != null
-                ? (int)HttpStatusCode.InternalServerError
-                : ex.Status;
+            context.Response.StatusCode = ex.Status;
             context.Response.ContentType = "application/json";
 
             var response = _options.ResponseWrapper?.Invoke(ex) ?? new

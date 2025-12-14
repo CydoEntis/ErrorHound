@@ -685,7 +685,7 @@ app.UseErrorHound(options =>
 }
 ```
 
-**Important Note:** When using a custom `ResponseWrapper`, ErrorHound sets the HTTP status code to **500** (Internal Server Error) to prevent information leakage. If you need the original status codes, you can access `error.Status` and set it manually in your wrapper logic.
+**Important Note:** When using a custom `ResponseWrapper`, the HTTP status code from the original error is preserved. For example, a `NotFoundError` will still return HTTP 404, a `BadRequestError` will return HTTP 400, etc. Only the response body format changes based on your custom wrapper.
 
 ---
 
