@@ -557,10 +557,12 @@ throw new UnauthorizedError();
 
 ### Custom Response Wrapper
 
-You can completely customize the response structure using the `ResponseWrapper` option. This is useful for:
+You can completely customize the error response **body format** while **preserving the original HTTP status codes** using the `ResponseWrapper` option. This is useful for:
 - Matching existing API response formats
 - Adding additional metadata (timestamps, request IDs, etc.)
 - Wrapping errors in a consistent envelope
+
+**Important:** The HTTP status code (404, 400, 401, etc.) is always preserved from the original error. Only the JSON response body structure changes.
 
 #### Example 1: Simple Custom Format
 
@@ -583,7 +585,10 @@ throw new NotFoundError("User not found");
 ```
 
 **Response becomes:**
-```json
+```
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
 {
   "success": false,
   "errorCode": "NOT_FOUND",
@@ -591,6 +596,8 @@ throw new NotFoundError("User not found");
   "timestamp": "2025-12-13T15:30:00Z"
 }
 ```
+
+**Notice:** The HTTP status is **404 Not Found** (preserved from NotFoundError), but the response body uses your custom format!
 
 #### Example 2: Envelope Pattern with Metadata
 
@@ -1158,8 +1165,6 @@ app.UseErrorHound(options =>
   "data": "Product with ID 123 does not exist"
 }
 ```
-
-**Note:** When using a custom `ResponseWrapper`, the HTTP status code is always set to 500 (Internal Server Error) to prevent leaking error types through status codes. If you need different status codes, handle them within your wrapper.
 
 ---
 
