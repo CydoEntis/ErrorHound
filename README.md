@@ -1,4 +1,8 @@
-# ErrorHound
+<div align="center">
+  <img src="./.github/assets/logo.png" alt="ErrorHound Logo" width="150" style="border-radius: 20px;"/>
+
+  # ErrorHound
+</div>
 
 **ErrorHound** is a lightweight, configurable ASP.NET Core middleware for consistent API error handling. It standardizes error responses, supports built-in common errors, and allows custom response wrappers.
 
