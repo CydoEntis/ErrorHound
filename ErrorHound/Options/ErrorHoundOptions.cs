@@ -1,6 +1,6 @@
 ﻿using ErrorHound.Core;
 
-namespace ErrorHound.Middleware;
+namespace ErrorHound.Options;
 
 public class ErrorHoundOptions
 {

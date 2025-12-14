@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using ErrorHound.Middleware;
+using ErrorHound.Options;
+using Microsoft.AspNetCore.Builder;
 
-namespace ErrorHound.Middleware;
+namespace ErrorHound.Extensions;
 
 public static class ErrorHoundExtensions
 {

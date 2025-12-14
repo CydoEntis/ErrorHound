@@ -1,4 +1,4 @@
-﻿namespace ErrorHound.Middleware
+﻿namespace ErrorHound.Dtos
 {
     /// <summary>
     /// Represents a single field error for API responses.

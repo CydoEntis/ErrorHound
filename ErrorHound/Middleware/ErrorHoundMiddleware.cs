@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using ErrorHound.BuiltIn;
 using ErrorHound.Core;
+using ErrorHound.Options;
 using Microsoft.Extensions.Logging;
 
 namespace ErrorHound.Middleware;
