@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
 
         <PackageId>ErrorHound</PackageId>
-        <Version>0.1.0</Version>
+        <Version>0.2.0</Version>
         <Authors>Cydo</Authors>
         <Company>ErrorHound</Company>
         <Description>Consistent error handling middleware for ASP.NET Minimal APIs</Description>
