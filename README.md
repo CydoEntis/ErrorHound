@@ -22,7 +22,7 @@
 - [Using All Error Types](#using-all-error-types)
 - [Response Formats](#response-formats)
   - [Default Response Format](#default-response-format)
-  - [Custom Response Wrapper](#custom-response-wrapper-1)
+  - [Custom Error Formatters](#custom-error-formatters)
 - [Validation Errors](#validation-errors-1)
 - [Creating Custom Errors](#creating-custom-errors)
 - [Real-World Scenarios](#real-world-scenarios)
@@ -40,7 +40,8 @@
 - **Field-level validation errors** with support for multiple errors per field
 - **Automatic logging** of all exceptions with appropriate log levels
 - **Consistent JSON responses** across your entire API
-- **Custom response wrappers** for complete control over error response format
+- **Custom error formatters** with dependency injection support for complete control over response format
+- **Type-safe configuration** using the abstraction pattern instead of delegates
 - **Minimal setup** - works with both Minimal APIs and classic ASP.NET Core
 - **Zero dependencies** beyond ASP.NET Core
 - **Fully tested** with comprehensive xUnit test coverage
@@ -68,10 +69,18 @@ Install-Package ErrorHound
 Here's the simplest way to get started with ErrorHound:
 
 ```csharp
-using ErrorHound.Middleware;
+using ErrorHound.Extensions;
+using ErrorHound.Formatters;
 using ErrorHound.BuiltIn;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register ErrorHound services
+builder.Services.AddErrorHound(options =>
+{
+    options.UseFormatter<DefaultErrorFormatter>();
+});
+
 var app = builder.Build();
 
 // Add ErrorHound middleware (must be early in the pipeline)
@@ -110,25 +119,22 @@ app.Run();
 For modern ASP.NET Core applications using Minimal APIs:
 
 ```csharp
-using ErrorHound.Middleware;
+using ErrorHound.Extensions;
+using ErrorHound.Formatters;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Step 1: Register ErrorHound services with a formatter
+builder.Services.AddErrorHound(options =>
+{
+    options.UseFormatter<DefaultErrorFormatter>();
+});
+
 var app = builder.Build();
 
-// Add ErrorHound early in the middleware pipeline
+// Step 2: Add ErrorHound middleware early in the pipeline
 // Place it before routing, authentication, and other middleware
 app.UseErrorHound();
-
-// Optional: Configure ErrorHound with custom options
-// app.UseErrorHound(options =>
-// {
-//     options.ResponseWrapper = (error) => new
-//     {
-//         errorCode = error.Code,
-//         errorMessage = error.Message,
-//         httpStatus = error.Status
-//     };
-// });
 
 app.MapGet("/", () => "Hello World");
 
@@ -140,31 +146,26 @@ app.Run();
 For traditional ASP.NET Core applications with controllers:
 
 ```csharp
-using ErrorHound.Middleware;
+using ErrorHound.Extensions;
+using ErrorHound.Formatters;
 
 public class Startup
 {
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddControllers();
-        // Add other services...
+
+        // Register ErrorHound services with a formatter
+        services.AddErrorHound(options =>
+        {
+            options.UseFormatter<DefaultErrorFormatter>();
+        });
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-        // Add ErrorHound as the first middleware
+        // Add ErrorHound middleware as the first middleware
         app.UseErrorHound();
-
-        // Or with custom configuration
-        // app.UseErrorHound(options =>
-        // {
-        //     options.ResponseWrapper = (error) => new
-        //     {
-        //         success = false,
-        //         error = error.Message,
-        //         code = error.Code
-        //     };
-        // });
 
         app.UseRouting();
         app.UseAuthentication();
@@ -555,27 +556,36 @@ throw new UnauthorizedError();
 }
 ```
 
-### Custom Response Wrapper
+### Custom Error Formatters
 
-You can completely customize the error response **body format** while **preserving the original HTTP status codes** using the `ResponseWrapper` option. This is useful for:
+You can completely customize the error response **body format** while **preserving the original HTTP status codes** by creating a custom formatter that implements `IErrorResponseFormatter`. This is useful for:
 - Matching existing API response formats
 - Adding additional metadata (timestamps, request IDs, etc.)
 - Wrapping errors in a consistent envelope
 
 **Important:** The HTTP status code (404, 400, 401, etc.) is always preserved from the original error. Only the JSON response body structure changes.
 
-#### Example 1: Simple Custom Format
+#### Example 1: Simple Custom Formatter
 
 ```csharp
-app.UseErrorHound(options =>
+using ErrorHound.Abstractions;
+using ErrorHound.Core;
+
+public sealed class CustomErrorFormatter : IErrorResponseFormatter
 {
-    options.ResponseWrapper = (error) => new
+    public object Format(ApiError error) => new
     {
         success = false,
         errorCode = error.Code,
         errorMessage = error.Message,
         timestamp = DateTime.UtcNow
     };
+}
+
+// Register the custom formatter
+builder.Services.AddErrorHound(options =>
+{
+    options.UseFormatter<CustomErrorFormatter>();
 });
 ```
 
@@ -602,9 +612,9 @@ Content-Type: application/json
 #### Example 2: Envelope Pattern with Metadata
 
 ```csharp
-app.UseErrorHound(options =>
+public sealed class EnvelopeErrorFormatter : IErrorResponseFormatter
 {
-    options.ResponseWrapper = (error) => new
+    public object Format(ApiError error) => new
     {
         success = false,
         error = new
@@ -620,6 +630,12 @@ app.UseErrorHound(options =>
             version = "v1"
         }
     };
+}
+
+// Register the formatter
+builder.Services.AddErrorHound(options =>
+{
+    options.UseFormatter<EnvelopeErrorFormatter>();
 });
 ```
 
@@ -640,18 +656,24 @@ app.UseErrorHound(options =>
 }
 ```
 
-#### Example 3: JSend-Style Responses
+#### Example 3: JSend-Style Formatter
 
 ```csharp
-app.UseErrorHound(options =>
+public sealed class JSendErrorFormatter : IErrorResponseFormatter
 {
-    options.ResponseWrapper = (error) => new
+    public object Format(ApiError error) => new
     {
         status = "error",
         message = error.Message,
         code = error.Code,
         data = error.Details
     };
+}
+
+// Register the formatter
+builder.Services.AddErrorHound(options =>
+{
+    options.UseFormatter<JSendErrorFormatter>();
 });
 ```
 
@@ -665,19 +687,46 @@ app.UseErrorHound(options =>
 }
 ```
 
-#### Example 4: Including HTTP Status in Body
+#### Example 4: Formatter with Dependency Injection
+
+Custom formatters can use dependency injection to access services like ILogger or IHttpContextAccessor:
 
 ```csharp
-app.UseErrorHound(options =>
+public sealed class AdvancedErrorFormatter : IErrorResponseFormatter
 {
-    options.ResponseWrapper = (error) => new
+    private readonly ILogger<AdvancedErrorFormatter> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public AdvancedErrorFormatter(
+        ILogger<AdvancedErrorFormatter> logger,
+        IHttpContextAccessor httpContextAccessor)
     {
-        httpStatus = error.Status,
-        errorCode = error.Code,
-        errorMessage = error.Message,
-        errorDetails = error.Details,
-        timestamp = DateTime.UtcNow.ToString("o")
-    };
+        _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public object Format(ApiError error)
+    {
+        var traceId = _httpContextAccessor.HttpContext?.TraceIdentifier;
+        _logger.LogDebug("Formatting error {Code} for trace {TraceId}", error.Code, traceId);
+
+        return new
+        {
+            httpStatus = error.Status,
+            errorCode = error.Code,
+            errorMessage = error.Message,
+            errorDetails = error.Details,
+            timestamp = DateTime.UtcNow.ToString("o"),
+            traceId
+        };
+    }
+}
+
+// Don't forget to register IHttpContextAccessor
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddErrorHound(options =>
+{
+    options.UseFormatter<AdvancedErrorFormatter>();
 });
 ```
 
@@ -688,11 +737,12 @@ app.UseErrorHound(options =>
   "errorCode": "CONFLICT",
   "errorMessage": "The request could not be completed due to a conflict.",
   "errorDetails": "Email already exists",
-  "timestamp": "2025-12-13T15:30:00.0000000Z"
+  "timestamp": "2025-12-13T15:30:00.0000000Z",
+  "traceId": "0HMV9C6O9N4AR:00000001"
 }
 ```
 
-**Important Note:** When using a custom `ResponseWrapper`, the HTTP status code from the original error is preserved. For example, a `NotFoundError` will still return HTTP 404, a `BadRequestError` will return HTTP 400, etc. Only the response body format changes based on your custom wrapper.
+**Important Note:** When using a custom formatter, the HTTP status code from the original error is preserved. For example, a `NotFoundError` will still return HTTP 404, a `BadRequestError` will return HTTP 400, etc. Only the response body format changes based on your custom formatter.
 
 ---
 
@@ -1137,14 +1187,17 @@ throw new BadRequestError(new
 });
 ```
 
-### Custom Response Wrapper
+### Custom Error Formatter
 
-You have complete control over the error response structure:
+You have complete control over the error response structure by creating a custom formatter:
 
 ```csharp
-app.UseErrorHound(options =>
+using ErrorHound.Abstractions;
+using ErrorHound.Core;
+
+public sealed class MyCustomFormatter : IErrorResponseFormatter
 {
-    options.ResponseWrapper = (error) => new
+    public object Format(ApiError error) => new
     {
         success = false,
         errorCode = error.Code,
@@ -1152,6 +1205,12 @@ app.UseErrorHound(options =>
         timestamp = DateTime.UtcNow,
         data = error.Details
     };
+}
+
+// Register the custom formatter
+builder.Services.AddErrorHound(options =>
+{
+    options.UseFormatter<MyCustomFormatter>();
 });
 ```
 
@@ -1283,16 +1342,39 @@ app.MapGet("/weather/{city}", async (string city, IWeatherApiClient weather) =>
 
 ## API Reference
 
+### IErrorResponseFormatter
+
+Interface for custom error response formatters.
+
+```csharp
+public interface IErrorResponseFormatter
+{
+    object Format(ApiError error);
+}
+```
+
 ### ErrorHoundOptions
 
 Configuration options for ErrorHound middleware.
 
 ```csharp
-public class ErrorHoundOptions
+public sealed class ErrorHoundOptions
 {
-    // Custom function to wrap error responses
-    public Func<ApiError, object>? ResponseWrapper { get; set; }
+    public void UseFormatter<T>() where T : class, IErrorResponseFormatter;
 }
+```
+
+### Extension Methods
+
+```csharp
+// Register ErrorHound services
+public static IServiceCollection AddErrorHound(
+    this IServiceCollection services,
+    Action<ErrorHoundOptions> configure);
+
+// Add ErrorHound middleware to pipeline
+public static IApplicationBuilder UseErrorHound(
+    this IApplicationBuilder app);
 ```
 
 ### ApiError Base Class
