@@ -1,5 +1,4 @@
 ﻿using ErrorHound.Abstractions;
-using ErrorHound.Formatters;
 using ErrorHound.Middleware;
 using ErrorHound.Options;
 using Microsoft.AspNetCore.Builder;

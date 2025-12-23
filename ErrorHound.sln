@@ -1,8 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorHound", "ErrorHound\ErrorHound.csproj", "{7D7B444A-5F92-450C-9351-EDC58E1EDA1B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorHound.Tests", "ErrorHound.Tests\ErrorHound.Tests.csproj", "{CFCB36F9-B48A-48A0-BCC0-262D8DDF5A87}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorHound.Sample", "ErrorHound.Sample\ErrorHound.Sample.csproj", "{40C32664-60EF-4AF3-862B-BF0E93FFA171}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +21,9 @@ Global
 		{CFCB36F9-B48A-48A0-BCC0-262D8DDF5A87}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CFCB36F9-B48A-48A0-BCC0-262D8DDF5A87}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CFCB36F9-B48A-48A0-BCC0-262D8DDF5A87}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40C32664-60EF-4AF3-862B-BF0E93FFA171}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40C32664-60EF-4AF3-862B-BF0E93FFA171}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40C32664-60EF-4AF3-862B-BF0E93FFA171}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40C32664-60EF-4AF3-862B-BF0E93FFA171}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

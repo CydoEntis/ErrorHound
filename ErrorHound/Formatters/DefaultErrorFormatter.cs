@@ -18,7 +18,6 @@ public sealed class DefaultErrorFormatter : IErrorResponseFormatter
     /// <returns>An anonymous object with code, message, status, and details properties.</returns>
     public object Format(ApiError error)
     {
-        // ValidationError has special handling to use FieldErrors as details
         if (error is ValidationError validationError)
         {
             return new
