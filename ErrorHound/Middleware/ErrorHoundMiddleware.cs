@@ -1,28 +1,41 @@
 ﻿using System.Net;
 using Microsoft.AspNetCore.Http;
+using ErrorHound.Abstractions;
 using ErrorHound.BuiltIn;
 using ErrorHound.Core;
-using ErrorHound.Options;
 using Microsoft.Extensions.Logging;
 
 namespace ErrorHound.Middleware;
 
-public class ErrorHoundMiddleware
+/// <summary>
+/// Middleware that catches and formats all exceptions in the ASP.NET Core pipeline.
+/// </summary>
+public sealed class ErrorHoundMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ErrorHoundMiddleware> _logger;
-    private readonly ErrorHoundOptions _options;
+    private readonly IErrorResponseFormatter _formatter;
 
+    /// <summary>
+    /// Initializes a new instance of the ErrorHoundMiddleware.
+    /// </summary>
+    /// <param name="next">The next middleware in the pipeline.</param>
+    /// <param name="logger">Logger for recording error information.</param>
+    /// <param name="formatter">The formatter to use for structuring error responses.</param>
     public ErrorHoundMiddleware(
         RequestDelegate next,
         ILogger<ErrorHoundMiddleware> logger,
-        ErrorHoundOptions? options = null)
+        IErrorResponseFormatter formatter)
     {
         _next = next;
         _logger = logger;
-        _options = options ?? new ErrorHoundOptions();
+        _formatter = formatter;
     }
 
+    /// <summary>
+    /// Processes the HTTP request and catches any exceptions.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -36,14 +49,7 @@ public class ErrorHoundMiddleware
             context.Response.StatusCode = ex.Status;
             context.Response.ContentType = "application/json";
 
-            var response = _options.ResponseWrapper?.Invoke(ex) ?? new
-            {
-                code = ex.Code,
-                message = ex.Message,
-                status = ex.Status,
-                details = ex.FieldErrors
-            };
-
+            var response = _formatter.Format(ex);
             await context.Response.WriteAsJsonAsync(response);
         }
         catch (ApiError ex)
@@ -53,14 +59,7 @@ public class ErrorHoundMiddleware
             context.Response.StatusCode = ex.Status;
             context.Response.ContentType = "application/json";
 
-            var response = _options.ResponseWrapper?.Invoke(ex) ?? new
-            {
-                code = ex.Code,
-                message = ex.Message,
-                status = ex.Status,
-                details = ex.Details
-            };
-
+            var response = _formatter.Format(ex);
             await context.Response.WriteAsJsonAsync(response);
         }
         catch (Exception ex)
@@ -71,14 +70,7 @@ public class ErrorHoundMiddleware
             context.Response.ContentType = "application/json";
 
             var genericError = new InternalServerError(ex.Message);
-
-            var response = _options.ResponseWrapper?.Invoke(genericError) ?? new
-            {
-                code = genericError.Code,
-                message = genericError.Message,
-                status = genericError.Status,
-                details = genericError.Details
-            };
+            var response = _formatter.Format(genericError);
 
             await context.Response.WriteAsJsonAsync(response);
         }

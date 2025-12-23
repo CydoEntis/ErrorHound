@@ -1,41 +1,49 @@
-﻿using ErrorHound.Middleware;
+﻿using ErrorHound.Abstractions;
+using ErrorHound.Formatters;
+using ErrorHound.Middleware;
 using ErrorHound.Options;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ErrorHound.Extensions;
 
 public static class ErrorHoundExtensions
 {
     /// <summary>
-    /// Registers ErrorHound middleware for classic ASP.NET Core applications (IApplicationBuilder).
+    /// Registers ErrorHound services in the dependency injection container.
+    /// This must be called before UseErrorHound in your application startup.
     /// </summary>
-    /// <param name="app">The application builder.</param>
-    /// <param name="configureOptions">Optional configuration for ErrorHoundOptions.</param>
-    /// <returns>The same application builder.</returns>
-    public static IApplicationBuilder UseErrorHound(
-        this IApplicationBuilder app,
-        Action<ErrorHoundOptions>? configureOptions = null)
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Configuration action for ErrorHoundOptions.</param>
+    /// <returns>The same service collection for chaining.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no formatter is configured.</exception>
+    public static IServiceCollection AddErrorHound(
+        this IServiceCollection services,
+        Action<ErrorHoundOptions> configure)
     {
         var options = new ErrorHoundOptions();
-        configureOptions?.Invoke(options);
+        configure(options);
 
-        return app.UseMiddleware<ErrorHoundMiddleware>(options);
+        if (options.FormatterType is null)
+            throw new InvalidOperationException(
+                "ErrorHound requires a formatter. Call options.UseFormatter<T>() in the configuration action.");
+
+        services.AddSingleton(
+            typeof(IErrorResponseFormatter),
+            options.FormatterType);
+
+        return services;
     }
 
     /// <summary>
-    /// Registers ErrorHound middleware for Minimal APIs (WebApplication).
+    /// Registers ErrorHound middleware in the ASP.NET Core pipeline.
+    /// Must be called after AddErrorHound during service registration.
     /// </summary>
-    /// <param name="app">The minimal API application.</param>
-    /// <param name="configureOptions">Optional configuration for ErrorHoundOptions.</param>
-    /// <returns>The same WebApplication instance.</returns>
-    public static WebApplication UseErrorHound(
-        this WebApplication app,
-        Action<ErrorHoundOptions>? configureOptions = null)
+    /// <param name="app">The application builder.</param>
+    /// <returns>The same application builder for chaining.</returns>
+    public static IApplicationBuilder UseErrorHound(
+        this IApplicationBuilder app)
     {
-        var options = new ErrorHoundOptions();
-        configureOptions?.Invoke(options);
-
-        app.UseMiddleware<ErrorHoundMiddleware>(options);
-        return app;
+        return app.UseMiddleware<ErrorHoundMiddleware>();
     }
 }

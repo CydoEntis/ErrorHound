@@ -1,12 +1,25 @@
-﻿using ErrorHound.Core;
+﻿using ErrorHound.Abstractions;
 
 namespace ErrorHound.Options;
 
-public class ErrorHoundOptions
+/// <summary>
+/// Configuration options for ErrorHound middleware.
+/// </summary>
+public sealed class ErrorHoundOptions
 {
     /// <summary>
-    /// Optional delegate to wrap ApiError objects into a custom response object.
-    /// If null, the default response structure is used.
+    /// Gets the type of the error response formatter.
+    /// Internal use only - set via UseFormatter method.
     /// </summary>
-    public Func<ApiError, object>? ResponseWrapper { get; set; }
+    internal Type? FormatterType { get; private set; }
+
+    /// <summary>
+    /// Configures ErrorHound to use a specific formatter implementation.
+    /// </summary>
+    /// <typeparam name="T">The formatter type that implements IErrorResponseFormatter.</typeparam>
+    public void UseFormatter<T>()
+        where T : class, IErrorResponseFormatter
+    {
+        FormatterType = typeof(T);
+    }
 }

@@ -1,8 +1,9 @@
 ﻿using System.Net;
+using ErrorHound.Abstractions;
 using ErrorHound.BuiltIn;
 using ErrorHound.Core;
+using ErrorHound.Formatters;
 using ErrorHound.Middleware;
-using ErrorHound.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -19,10 +20,11 @@ public class MiddlewareTests
 
     private ErrorHoundMiddleware CreateMiddleware(
         RequestDelegate next,
-        ErrorHoundOptions? options = null)
+        IErrorResponseFormatter? formatter = null)
     {
         var logger = NullLogger<ErrorHoundMiddleware>.Instance;
-        return new ErrorHoundMiddleware(next, logger, options);
+        var errorFormatter = formatter ?? new DefaultErrorFormatter();
+        return new ErrorHoundMiddleware(next, logger, errorFormatter);
     }
 
     private async Task TestMiddlewareThrowsAsync(
@@ -31,13 +33,13 @@ public class MiddlewareTests
         string expectedCode,
         Func<Exception> createException,
         string? expectedDetails = null,
-        ErrorHoundOptions? options = null)
+        IErrorResponseFormatter? formatter = null)
     {
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 
         RequestDelegate next = _ => throw createException();
-        var middleware = CreateMiddleware(next, options);
+        var middleware = CreateMiddleware(next, formatter);
 
         await middleware.InvokeAsync(context);
 
@@ -136,24 +138,26 @@ public class MiddlewareTests
     }
 
     [Fact]
-    public async Task Middleware_UsesCustomResponseWrapper()
+    public async Task Middleware_UsesCustomFormatter()
     {
-        var options = new ErrorHoundOptions
-        {
-            ResponseWrapper = _ => new
-            {
-                customCode = "CUSTOM_CODE",
-                customMessage = "This is a custom message",
-                status = 999
-            }
-        };
+        var customFormatter = new CustomTestFormatter();
 
         await TestMiddlewareThrowsAsync(
             HttpStatusCode.NotFound,
             "This is a custom message",
             "CUSTOM_CODE",
             () => new NotFoundError("Extra details"),
-            options: options);
+            formatter: customFormatter);
+    }
+
+    private sealed class CustomTestFormatter : IErrorResponseFormatter
+    {
+        public object Format(ApiError error) => new
+        {
+            customCode = "CUSTOM_CODE",
+            customMessage = "This is a custom message",
+            status = 999
+        };
     }
 
     [Fact]
