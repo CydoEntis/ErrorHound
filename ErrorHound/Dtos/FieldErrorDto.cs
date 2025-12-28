@@ -1,11 +1,17 @@
-﻿namespace ErrorHound.Dtos
+﻿namespace ErrorHound.Dtos;
+
+/// <summary>
+/// Represents a single field error for API responses.
+/// </summary>
+public class FieldErrorDto
 {
     /// <summary>
-    /// Represents a single field error for API responses.
+    /// The name of the field that has errors.
     /// </summary>
-    public class FieldErrorDto
-    {
-        public string Field { get; set; } = string.Empty;
-        public List<string> Errors { get; set; } = new List<string>();
-    }
+    public string Field { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The list of error messages for this field.
+    /// </summary>
+    public List<string> Errors { get; set; } = new List<string>();
 }

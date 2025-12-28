@@ -4,7 +4,8 @@ using ErrorHound.Core;
 namespace ErrorHound.Sample.Errors;
 
 /// <summary>
-/// Custom error for email verification scenarios
+/// Custom error for email verification scenarios.
+/// Demonstrates creating a custom error with structured details.
 /// </summary>
 public sealed class EmailNotVerifiedError : ApiError
 {
@@ -23,7 +24,8 @@ public sealed class EmailNotVerifiedError : ApiError
 }
 
 /// <summary>
-/// Custom error for subscription-related issues
+/// Custom error for subscription-related issues.
+/// Demonstrates using a custom HTTP status code (402 Payment Required).
 /// </summary>
 public sealed class SubscriptionExpiredError : ApiError
 {
@@ -42,7 +44,8 @@ public sealed class SubscriptionExpiredError : ApiError
 }
 
 /// <summary>
-/// Custom error for rate limiting with retry information
+/// Custom error for rate limiting with retry information.
+/// Demonstrates including structured retry metadata in error details.
 /// </summary>
 public sealed class RateLimitExceededError : ApiError
 {
@@ -62,7 +65,8 @@ public sealed class RateLimitExceededError : ApiError
 }
 
 /// <summary>
-/// Custom error for insufficient stock
+/// Custom error for insufficient stock scenarios.
+/// Demonstrates creating domain-specific errors with contextual information.
 /// </summary>
 public sealed class InsufficientStockError : ApiError
 {

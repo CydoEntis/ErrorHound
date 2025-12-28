@@ -9,5 +9,7 @@ using ErrorHound.Core;
 public sealed class ForbiddenError : ApiError
 {
     public ForbiddenError(string? details = null)
-        : base(ErrorCodes.Forbidden, ErrorMessages.Forbidden, (int)HttpStatusCode.Forbidden, details) { }
+        : base(ErrorCodes.Forbidden, ErrorMessages.Forbidden, (int)HttpStatusCode.Forbidden, details)
+    {
+    }
 }

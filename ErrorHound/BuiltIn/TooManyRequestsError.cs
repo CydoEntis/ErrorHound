@@ -9,5 +9,7 @@ using ErrorHound.Core;
 public sealed class TooManyRequestsError : ApiError
 {
     public TooManyRequestsError(string? details = null)
-        : base(ErrorCodes.TooManyRequests, ErrorMessages.TooManyRequests, (int)HttpStatusCode.TooManyRequests, details) { }
+        : base(ErrorCodes.TooManyRequests, ErrorMessages.TooManyRequests, (int)HttpStatusCode.TooManyRequests, details)
+    {
+    }
 }

@@ -9,5 +9,7 @@ using ErrorHound.Core;
 public sealed class InternalServerError : ApiError
 {
     public InternalServerError(string? details = null)
-        : base(ErrorCodes.InternalServer, ErrorMessages.InternalServer, (int)HttpStatusCode.InternalServerError, details) { }
+        : base(ErrorCodes.InternalServer, ErrorMessages.InternalServer, (int)HttpStatusCode.InternalServerError, details)
+    {
+    }
 }

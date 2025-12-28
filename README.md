@@ -10,6 +10,9 @@
 
 **ErrorHound** is a lightweight, flexible error-handling middleware for ASP.NET Core applications. It provides consistent, standardized error responses across your entire API, with built-in support for common HTTP errors, field-level validation, and fully customizable response formatting.
 
+> **⚠️ Version 2.0 Breaking Change**
+> If you're upgrading from v1.x, the default error response format has changed to use an envelope structure with `success`, `error`, and `meta` fields. This provides consistency with SuccessHound responses. See the [CHANGELOG](CHANGELOG.md) for migration details.
+
 ## Table of Contents
 
 - [Features](#features)
@@ -103,10 +106,16 @@ app.Run();
 **Response when `id = -1`:**
 ```json
 {
-  "code": "BAD_REQUEST",
-  "message": "The request was invalid or malformed.",
-  "status": 400,
-  "details": "User ID must be greater than 0"
+  "success": false,
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "The request was invalid or malformed.",
+    "details": "User ID must be greater than 0"
+  },
+  "meta": {
+    "timestamp": "2025-12-28T18:03:28.6056493Z",
+    "version": "v1.0"
+  }
 }
 ```
 
@@ -494,14 +503,20 @@ app.MapGet("/analytics/report", async (IAnalyticsService analytics) =>
 
 ### Default Response Format
 
-When you use ErrorHound **without** a custom response wrapper, all errors return in this standardized format:
+ErrorHound v2.0+ uses a consistent envelope format that matches SuccessHound, providing a uniform structure for both success and error responses:
 
 ```json
 {
-  "code": "ERROR_CODE",
-  "message": "Human-readable error message",
-  "status": 400,
-  "details": "Optional additional details or null"
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": "Optional additional details or null"
+  },
+  "meta": {
+    "timestamp": "2025-12-28T18:03:28.6056493Z",
+    "version": "v1.0"
+  }
 }
 ```
 
@@ -513,10 +528,16 @@ throw new NotFoundError("User with ID 123 not found");
 
 ```json
 {
-  "code": "NOT_FOUND",
-  "message": "The requested resource could not be found.",
-  "status": 404,
-  "details": "User with ID 123 not found"
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "The requested resource could not be found.",
+    "details": "User with ID 123 not found"
+  },
+  "meta": {
+    "timestamp": "2025-12-28T18:03:28.6056493Z",
+    "version": "v1.0"
+  }
 }
 ```
 
@@ -531,12 +552,18 @@ throw validation;
 
 ```json
 {
-  "code": "VALIDATION",
-  "message": "Validation failed",
-  "status": 400,
-  "details": {
-    "Email": ["Email is required"],
-    "Password": ["Password must be at least 8 characters"]
+  "success": false,
+  "error": {
+    "code": "VALIDATION",
+    "message": "Validation failed",
+    "details": {
+      "Email": ["Email is required"],
+      "Password": ["Password must be at least 8 characters"]
+    }
+  },
+  "meta": {
+    "timestamp": "2025-12-28T18:03:28.6056493Z",
+    "version": "v1.0"
   }
 }
 ```
@@ -549,10 +576,16 @@ throw new UnauthorizedError();
 
 ```json
 {
-  "code": "UNAUTHORIZED",
-  "message": "Authentication is required to access this resource.",
-  "status": 401,
-  "details": null
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication is required to access this resource.",
+    "details": null
+  },
+  "meta": {
+    "timestamp": "2025-12-28T18:03:28.6056493Z",
+    "version": "v1.0"
+  }
 }
 ```
 

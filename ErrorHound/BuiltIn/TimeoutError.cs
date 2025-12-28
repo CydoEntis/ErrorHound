@@ -9,5 +9,7 @@ using ErrorHound.Core;
 public sealed class TimeoutError : ApiError
 {
     public TimeoutError(string? details = null)
-        : base(ErrorCodes.Timeout, ErrorMessages.Timeout, (int)HttpStatusCode.GatewayTimeout, details) { }
+        : base(ErrorCodes.Timeout, ErrorMessages.Timeout, (int)HttpStatusCode.GatewayTimeout, details)
+    {
+    }
 }

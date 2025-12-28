@@ -4,10 +4,12 @@ using System.Net;
 using ErrorHound.Core;
 
 /// <summary>
-/// Represents a generic Not Found error
+/// Represents a resource not found error.
 /// </summary>
 public sealed class NotFoundError : ApiError
 {
     public NotFoundError(string? details = null)
-        : base(ErrorCodes.NotFound, ErrorMessages.NotFound, (int)HttpStatusCode.NotFound, details) { }
+        : base(ErrorCodes.NotFound, ErrorMessages.NotFound, (int)HttpStatusCode.NotFound, details)
+    {
+    }
 }

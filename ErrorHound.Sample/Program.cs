@@ -7,24 +7,42 @@ using ErrorHound.Sample.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Required for CustomApiFormatter if using it
 builder.Services.AddHttpContextAccessor();
 
-// Register ErrorHound with custom formatter
-// OPTION 1: Use DefaultErrorFormatter (uncomment to use)
-// builder.Services.AddErrorHound(options =>
-// {
-//     options.UseFormatter<DefaultErrorFormatter>();
-// });
+// ==========================================
+// STEP 1: Register ErrorHound Services
+// ==========================================
+// Register ErrorHound and configure which formatter to use.
+// The formatter controls the structure of your error responses.
 
-// OPTION 2: Use CustomApiFormatter with envelope pattern (currently active)
+// OPTION 1: Use DefaultErrorFormatter (recommended - currently active)
+// This provides a consistent envelope format that matches SuccessHound:
+// {
+//   "success": false,
+//   "error": { "code": "...", "message": "...", "details": "..." },
+//   "meta": { "timestamp": "...", "version": "..." }
+// }
 builder.Services.AddErrorHound(options =>
 {
-    options.UseFormatter<CustomApiFormatter>();
+    options.UseFormatter<DefaultErrorFormatter>();
 });
+
+// OPTION 2: Use a custom formatter (uncomment to use)
+// Create your own formatter by implementing IErrorResponseFormatter.
+// See CustomApiFormatter.cs for an example that adds traceId to metadata.
+// builder.Services.AddErrorHound(options =>
+// {
+//     options.UseFormatter<CustomApiFormatter>();
+// });
 
 var app = builder.Build();
 
-// Add ErrorHound middleware EARLY in the pipeline
+// ==========================================
+// STEP 2: Add ErrorHound Middleware
+// ==========================================
+// IMPORTANT: Add this EARLY in your middleware pipeline, before any endpoints.
+// ErrorHound will catch all unhandled exceptions and format them consistently.
 app.UseErrorHound();
 
 var users = new List<User>();
@@ -43,7 +61,7 @@ var loginAttempts = new Dictionary<string, List<DateTime>>();
 app.MapGet("/", () => new
 {
     message = "ErrorHound Sample API",
-    version = "1.0.0",
+    version = "2.0.0",
     endpoints = new
     {
         builtInErrors = "/api/demo",
@@ -57,8 +75,27 @@ app.MapGet("/", () => new
 // ==========================================
 // BUILT-IN ERROR DEMONSTRATIONS
 // ==========================================
+// ErrorHound provides ready-to-use error types for common HTTP status codes.
+// Simply throw these errors anywhere in your application, and ErrorHound
+// will automatically catch and format them into consistent responses.
+//
+// Available built-in errors:
+// - BadRequestError (400)
+// - UnauthorizedError (401)
+// - ForbiddenError (403)
+// - NotFoundError (404)
+// - ConflictError (409)
+// - TooManyRequestsError (429)
+// - InternalServerError (500)
+// - DatabaseError (500)
+// - ServiceUnavailableError (503)
+// - TimeoutError (504)
+//
+// Each error accepts an optional 'details' parameter for additional context.
+
 app.MapGet("/api/demo/bad-request", () =>
 {
+    // Throw a built-in error with optional details
     throw new BadRequestError("This is a simulated bad request error");
 })
 .WithTags("Demo - Built-in Errors");
@@ -117,10 +154,15 @@ app.MapGet("/api/demo/timeout", () =>
 })
 .WithTags("Demo - Built-in Errors");
 
+// ValidationError is a special built-in error for handling field-level validation.
+// It allows you to add multiple errors per field and automatically formats them.
 app.MapPost("/api/demo/validation", (CreateUserRequest request) =>
 {
+    // Create a new ValidationError instance
     var validation = new ValidationError();
 
+    // Add field-level errors using AddFieldError(fieldName, errorMessage)
+    // You can add multiple errors to the same field
     if (string.IsNullOrWhiteSpace(request.Email))
         validation.AddFieldError("Email", "Email is required");
     else if (!request.Email.Contains('@'))
@@ -139,6 +181,7 @@ app.MapPost("/api/demo/validation", (CreateUserRequest request) =>
     if (string.IsNullOrWhiteSpace(request.Name))
         validation.AddFieldError("Name", "Name is required");
 
+    // Throw the ValidationError if any errors were added
     if (validation.FieldErrors.Any())
         throw validation;
 
@@ -149,8 +192,19 @@ app.MapPost("/api/demo/validation", (CreateUserRequest request) =>
 // ==========================================
 // CUSTOM ERROR DEMONSTRATIONS
 // ==========================================
+// You can create custom errors by extending the ApiError base class.
+// This allows you to define domain-specific errors with custom codes,
+// messages, HTTP status codes, and structured details.
+//
+// To create a custom error:
+// 1. Create a class that inherits from ApiError
+// 2. Pass your custom code, message, status, and details to the base constructor
+//
+// See the Errors/CustomErrors.cs file for examples.
+
 app.MapGet("/api/custom/email-not-verified", () =>
 {
+    // Throw a custom error defined in your application
     throw new EmailNotVerifiedError("user@example.com");
 })
 .WithTags("Demo - Custom Errors");
@@ -180,6 +234,11 @@ app.MapGet("/api/custom/insufficient-stock", () =>
 // ==========================================
 // REALISTIC USER ENDPOINTS
 // ==========================================
+// These endpoints demonstrate real-world usage patterns:
+// - Using NotFoundError when a resource doesn't exist
+// - Using ValidationError for request validation
+// - Using ConflictError when a duplicate resource is created
+
 app.MapGet("/api/users", () => Results.Ok(users))
     .WithTags("Users");
 
@@ -246,6 +305,9 @@ app.MapDelete("/api/users/{id}", (int id) =>
 // ==========================================
 // REALISTIC PRODUCT ENDPOINTS
 // ==========================================
+// These endpoints demonstrate using custom errors (InsufficientStockError)
+// alongside built-in errors (NotFoundError, ValidationError, BadRequestError).
+
 app.MapGet("/api/products", () => Results.Ok(products))
     .WithTags("Products");
 
@@ -314,6 +376,12 @@ app.MapPost("/api/products/{id}/purchase", (int id, int quantity) =>
 // ==========================================
 // AUTHENTICATION ENDPOINTS
 // ==========================================
+// This endpoint demonstrates:
+// - Using BadRequestError for missing required fields
+// - Using custom RateLimitExceededError with retry information
+// - Using UnauthorizedError for invalid credentials
+// - Using custom EmailNotVerifiedError for unverified accounts
+
 app.MapPost("/api/auth/login", (LoginRequest request) =>
 {
     if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -361,8 +429,14 @@ app.MapPost("/api/auth/login", (LoginRequest request) =>
 // ==========================================
 // UNHANDLED EXCEPTION DEMONSTRATION
 // ==========================================
+// ErrorHound catches ALL exceptions, not just ApiError types.
+// Any unhandled exception (like InvalidOperationException, NullReferenceException, etc.)
+// will be caught and formatted as an InternalServerError (500) response.
+// This ensures your API never returns unformatted error responses to clients.
+
 app.MapGet("/api/demo/unhandled-exception", () =>
 {
+    // This generic exception will be caught and formatted as InternalServerError
     throw new InvalidOperationException("This is an unhandled exception that ErrorHound will catch");
 })
 .WithTags("Demo - Built-in Errors");

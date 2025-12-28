@@ -6,35 +6,52 @@ using ErrorHound.Core;
 
 /// <summary>
 /// The default error response formatter used by ErrorHound.
-/// Formats errors into a consistent JSON structure with code, message, status, and details.
+/// Formats errors into a consistent envelope structure with success, error, and meta properties.
 /// </summary>
 public sealed class DefaultErrorFormatter : IErrorResponseFormatter
 {
     /// <summary>
     /// Formats an ApiError into the default response structure.
-    /// ValidationError instances use FieldErrors as details, while other errors use the Details property.
+    /// Returns a consistent envelope format with success, error, and meta properties
+    /// to match SuccessHound response structure.
     /// </summary>
     /// <param name="error">The error to format.</param>
-    /// <returns>An anonymous object with code, message, status, and details properties.</returns>
+    /// <returns>An anonymous object with success, error, and meta properties.</returns>
     public object Format(ApiError error)
     {
         if (error is ValidationError validationError)
         {
             return new
             {
-                code = error.Code,
-                message = error.Message,
-                status = error.Status,
-                details = validationError.FieldErrors
+                success = false,
+                error = new
+                {
+                    code = error.Code,
+                    message = error.Message,
+                    details = validationError.FieldErrors
+                },
+                meta = new
+                {
+                    timestamp = DateTime.UtcNow,
+                    version = "v1.0"
+                }
             };
         }
 
         return new
         {
-            code = error.Code,
-            message = error.Message,
-            status = error.Status,
-            details = error.Details
+            success = false,
+            error = new
+            {
+                code = error.Code,
+                message = error.Message,
+                details = error.Details
+            },
+            meta = new
+            {
+                timestamp = DateTime.UtcNow,
+                version = "v1.0"
+            }
         };
     }
 }

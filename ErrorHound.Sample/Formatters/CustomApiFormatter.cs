@@ -5,8 +5,8 @@ using ErrorHound.Core;
 namespace ErrorHound.Sample.Formatters;
 
 /// <summary>
-/// Custom formatter that wraps errors in an envelope with metadata
-/// Demonstrates dependency injection support
+/// Custom formatter that extends the default format by adding traceId to metadata.
+/// Demonstrates how to customize the error response format and use dependency injection.
 /// </summary>
 public sealed class CustomApiFormatter : IErrorResponseFormatter
 {
